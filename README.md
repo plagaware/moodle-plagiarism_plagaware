@@ -9,6 +9,9 @@ For further support, please contact the [PlagAware Support](https://my.plagaware
 
 # Release Notes
 
+## 2.0.9
+- Bugfix: Duplicate settings in assingment module
+
 ## 2.0.8
 - Ensure compatibility with Moodle 4.2x
 - Link to interactive plagiarism scan result report rather than static HTML/PDF report

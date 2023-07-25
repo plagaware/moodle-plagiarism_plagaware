@@ -214,8 +214,12 @@
 	
 	
 	function plagiarism_plagaware_coursemodule_standard_elements($formwrapper, $mform) {
-		global $DB;
-		$plagium = 'plagiarism_plagaware';
+		global $DB, $CFG;
+		
+		if ($CFG->version < 2022112805) {
+			return '';
+
+		}
 		
 		$context = context_course::instance($formwrapper->get_course()->id);
 		
