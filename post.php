@@ -47,7 +47,10 @@ if ($action == 'grading') {
 } else {
 	$urltogo = new moodle_url($CFG->wwwroot . '/mod/assign/view.php', array('userid' => $userid, 'id' => $return, 'action' => 'grader'));
 }
-
-redirect($urltogo, get_string('submited', 'plagiarism_plagaware'), null, \core\output\notification::NOTIFY_SUCCESS);
+if ($post) {
+	redirect($urltogo, get_string('submited', 'plagiarism_plagaware'), null, \core\output\notification::NOTIFY_SUCCESS);
+} else {
+	redirect($urltogo, get_string('submission_error', 'plagiarism_plagaware'), null, \core\output\notification::NOTIFY_WARNING);
+}
 
 ?>

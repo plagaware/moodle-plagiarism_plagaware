@@ -27,14 +27,18 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname']                   = 'PlagAware Plagiatsprüfung';
 $string['plagaware']                    = 'PlagAware';
 $string['usercode']                   	= 'User Code';
-$string['enabled']                = 'PlagAware Aktivieren';
+$string['enabled']                      = 'PlagAware Aktivieren';
 $string['plagaware_auto_post']          = 'Automatische Übergabe an PlagAware';
-$string['enabled_help']           = 'Plagiatsprüfung von PlagAware in Aufgaben ermöglichen';
+$string['enabled_help']                 = 'Plagiatsprüfung von PlagAware in Aufgaben ermöglichen';
 $string['saved_plagaware_settings']     = 'Einstellungen erfolgreich gespeichert';
 $string['plagaware_settings_header']    = 'PlagAware Einstellungen';
 $string['view_report']                  = 'Ansehen';
 $string['view_report_pdf']              = 'PDF';
-$string['wait_for_report']              = 'Warte...';
+$string['wait_for_report']              = 'Warte auf PlagAware...';
 $string['send_file']                    = 'Plagiatsprüfung...';
 $string['submited']                     = 'Plagiatsprüfung gestartet';
-
+$string['plagawareuse']                 = 'PlagAware Aktivieren'; //plagaware_use
+$string['error']                        = 'Plagiatsprüfung fehlgeschlagen';
+$string['timeout']                      = 'Timeout';
+$string['restart']                      = 'Plagiatsprüfung neu starten...';
+$string['submission_error']             = 'Ein oder mehrere Dateien konnten nicht an PlagAware übergeben werden';

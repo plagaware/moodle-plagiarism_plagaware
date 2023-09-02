@@ -29,6 +29,85 @@ defined('MOODLE_INTERNAL') || die();
 class plagiarism_plugin_plagaware_submissions
 {
 
+	/**
+	 * Create a new record to track file submissions to PlagAware with default settings
+	 */
+	private static function CreateNewPlagAwareFileRecord($assignid, $userid, $fileinfo) {
+		$record = new stdClass();
+		$record->assignid = $assignid;
+		$record->userid = $userid;
+		$record->filetype = "file";
+		$record->fileid = $fileinfo->id;
+		$record->timecreated = time();
+		$record->reporturl = 1;
+		$record->filehash = $fileinfo->contenthash;
+		$record->status = "waiting";
+		$record->replytime = null;
+		return $record;
+	}
+
+	/**
+	 * Create a new record to track online text submissions to PlagAware with default settings
+	 */
+	private static function CreateNewPlagAwareTextRecord($assignsubmission, $userid) {
+		$record = new stdClass();
+		$record->assignid = $assignsubmission->assignment;
+		$record->userid = $userid;
+		$record->filetype = "onlinetext";
+		$record->fileid = $assignsubmission->id;
+		$record->timecreated = time();
+		$record->reporturl = 1;
+		$record->status = "waiting";
+		$record->replytime = null;
+		return $record;
+	}
+
+	/**
+	 * Fetch an existing record for a given file transmission. Used to make sure files are not submitted repeatedly.
+	 */
+	private static function GetExistingPlagAwareFileRecord($assignid, $userid, $fileinfo) {
+		global $DB;
+		$existingRecordSql = "SELECT id, status  FROM {plagiarism_plagaware} WHERE userid = ? AND filetype = ? AND assignid = ?  AND fileid = ?";
+		$existingRecord = $DB->get_record_sql($existingRecordSql, array($userid, "file", $assignid, $fileinfo->id));
+		return $existingRecord;
+	}
+
+	/**
+	 * Fetch an existing record for a given online text transmission. Used to make sure files are not submitted repeatedly.
+	 */
+	private static function GetExistingPlagAwareTextRecord($assignid, $userid) {
+		global $DB;
+		$existingRecordSql = "SELECT id  FROM {plagiarism_plagaware} WHERE userid = ? AND filetype = ? AND assignid = ?";
+		$existingRecord = $DB->get_record_sql($existingRecordSql, array($userid, "onlinetext", $assignid));
+		return $existingRecord;
+	}
+
+
+	/**
+	 * Submit a file or online text to PlagAware. Update record with error message in case of failure.
+	 * Returns true in case of success, false in case of failure
+	 */
+	private static function SubmitRecord($record, $testText = null, $fileinfo = null) {
+
+		global $DB, $CFG;
+		$plagawareconfig = get_config('plagiarism_plagaware');
+
+		// submit the file to PlagAware and register callback function
+		$resultUrl = $CFG->wwwroot . "/plagiarism/plagaware/callback.php?recoredid=" . $record->id;
+		$userCode = $plagawareconfig->usercode;
+		$sendrequest = self::SubmitPlagAware($userCode, $resultUrl, $testText, $reportName = null, $reportComment = null, $projectId = null, $fileinfo, $dryRun = false);
+		
+		// in case of success, PlagAware returns a JSON object
+		$replyObject = json_decode($sendrequest);
+		// if the object cannot be read, treat PlagAware return message as error message and mark the file as error
+		if (!$replyObject) {
+			$record->status = "error";
+			$record->reporturl = $sendrequest; // Attention: we're hijacking expected report url as description for the error
+			$DB->update_record('plagiarism_plagaware', $record, $bulk = false);
+			return false;
+		}
+		return true;
+	}
 
 	public static function check_and_send_submission_file_to_plagaware($userid, $fid, $contextid, $cmidd)
 	{
@@ -50,26 +129,26 @@ class plagiarism_plugin_plagaware_submissions
 					$sql .= "WHERE id = :fid ";
 					$fileinfos = $DB->get_records_sql($sql, $params);
 
+					$transmissionSuccess = true;
+
 					foreach ($fileinfos as $fileinfo) {
-						$count = "SELECT id  FROM {plagiarism_plagaware} WHERE userid = ? AND filetype = ? AND assignid = ?  AND fileid = ?";
-						$countsubmit = $DB->get_record_sql($count, array($userid, "file", $assignid, $fileinfo->id));
-						$record = new stdClass();
-						$record->assignid = $assignid;
-						$record->userid = $userid;
-						$record->filetype = "file";
-						$record->fileid = $fileinfo->id;
-						$record->timecreated = time();
-						$record->reporturl = 1;
-						$record->filehash = $fileinfo->contenthash;
-						if (!$countsubmit) {
-							$newrecordid = $DB->insert_record('plagiarism_plagaware', $record);
-							$resultUrl = $CFG->wwwroot . "/plagiarism/plagaware/callback.php?recoredid=" . $newrecordid;
-							$userCode = $plagawareconfig->usercode;
-							$sendrequest = self::SubmitPlagAware($userCode, $resultUrl, '', $reportName = null, $reportComment = null, $projectId = null, $fileinfo, true, $dryRun = false);
+						
+						$record = self::CreateNewPlagAwareFileRecord($assignid, $userid, $fileinfo);
+						$existingRecord = self::GetExistingPlagAwareFileRecord($assignid, $userid, $fileinfo);
+						//print_object($existingRecord);
 
+						// if there is no record for this file (was never sent to Plagaware before), create a new default record
+						if (!$existingRecord) {
+							$record->id = $DB->insert_record('plagiarism_plagaware', $record);
+						} // otherwise, update the existing record with default parameters
+						else {
+							$record->id = $existingRecord->id;
+							$DB->update_record('plagiarism_plagaware', $record, $bulk = false);
 						}
-
+						$transmissionSuccess &= self::SubmitRecord($record, null, $fileinfo);
 					}
+
+					return $transmissionSuccess;
 				}
 			}
 		}
@@ -94,40 +173,24 @@ class plagiarism_plugin_plagaware_submissions
 
 			if ($assignsubmission = $DB->get_record('assignsubmission_onlinetext', array('id' => $submissionid))) {
 
-				if (
-					$assignmentplagaware = $DB->get_field(
-						'plagiarism_plagaware_assign',
-						'enabled',
-						array('assignid' => $assignsubmission->assignment)
-					)
-				) {
+				if ($DB->get_field('plagiarism_plagaware_assign', 'enabled', array('assignid' => $assignsubmission->assignment))) {
 
-					// Insert information in plagaware database.
-					$count = "SELECT id  FROM {plagiarism_plagaware} WHERE userid = ? AND filetype = ? AND assignid = ?
-						";
-					$countsubmit = $DB->get_record_sql($count, array($userid, "onlinetext", $assignmentid));
-					$record = new stdClass();
-					$record->assignid = $assignsubmission->assignment;
-					$record->userid = $userid;
-					$record->filetype = "onlinetext";
-					$record->fileid = $assignsubmission->id;
-					$record->timecreated = time();
-					$record->reporturl = 1;
+					$existingRecord = self::GetExistingPlagAwareTextRecord($assignmentid, $userid);
+					$record = self::CreateNewPlagAwareTextRecord($assignsubmission, $userid);
 
-					if (!$countsubmit) {
-						$newrecordid = $DB->insert_record('plagiarism_plagaware', $record);
-						$resultUrl = $CFG->wwwroot . "/plagiarism/plagaware/callback.php?recoredid=" . $newrecordid;
-					} else {
-						$record->id = $countsubmit;
+					$transmissionSuccess = true;
+
+					// if there is no record for this file (was never sent to Plagaware before), create a new default record
+					if (!$existingRecord) {
+						$record->id = $DB->insert_record('plagiarism_plagaware', $record);
+					} // otherwise, update the existing record with default parameters
+					else {
+						$record->id = $existingRecord->id;
 						$DB->update_record('plagiarism_plagaware', $record, $bulk = false);
-						$resultUrl = $CFG->wwwroot . "/plagiarism/plagaware/callback.php?recoredid=" . $countsubmit->id;
 					}
-					$userCode = $plagawareconfig->usercode;
-
 					$testText = base64_encode($assignsubmission->onlinetext);
-
-					$sendrequest = self::SubmitPlagAware($userCode, $resultUrl, $testText);
-
+					$transmissionSuccess &= self::SubmitRecord($record, $testText, null);
+					return $transmissionSuccess;
 				}
 			}
 		}
@@ -138,7 +201,6 @@ class plagiarism_plugin_plagaware_submissions
 	{
 
 		$userid = $event->userid;
-
 		$contextid = $event->contextid;
 		$cmidd = $event->objectid;
 
@@ -150,7 +212,7 @@ class plagiarism_plugin_plagaware_submissions
 			$submissionid = $cmidd;
 
 			if ($assignid = $DB->get_field('assignsubmission_file', 'assignment', array('id' => $submissionid))) {
-				if ($assignmentplagaware = $DB->get_field('plagiarism_plagaware_assign', 'enabled', array('assignid' => $assignid)) && $assignmentplagaware = $DB->get_field('plagiarism_plagaware_assign', 'autoenabled', array('assignid' => $assignid))) {
+				if ($DB->get_field('plagiarism_plagaware_assign', 'enabled', array('assignid' => $assignid)) && $DB->get_field('plagiarism_plagaware_assign', 'autoenabled', array('assignid' => $assignid))) {
 
 					require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
@@ -162,22 +224,14 @@ class plagiarism_plugin_plagaware_submissions
 					$fileinfos = $DB->get_records_sql($sql, $params);
 
 					foreach ($fileinfos as $fileinfo) {
-						$count = "SELECT id  FROM {plagiarism_plagaware} WHERE userid = ? AND filetype = ? AND assignid = ?  AND fileid = ?";
-						$countsubmit = $DB->get_record_sql($count, array($userid, "file", $assignid, $fileinfo->id));
-						$record = new stdClass();
-						$record->assignid = $assignid;
-						$record->userid = $userid;
-						$record->filetype = "file";
-						$record->fileid = $fileinfo->id;
-						$record->timecreated = time();
-						$record->reporturl = 1;
-						$record->filehash = $fileinfo->contenthash;
-						if (!$countsubmit) {
-							$newrecordid = $DB->insert_record('plagiarism_plagaware', $record);
-							$resultUrl = $CFG->wwwroot . "/plagiarism/plagaware/callback.php?recoredid=" . $newrecordid;
-							$userCode = $plagawareconfig->usercode;
-							$sendrequest = self::SubmitPlagAware($userCode, $resultUrl, '', $reportName = null, $reportComment = null, $projectId = null, $fileinfo, true, $dryRun = false);
 
+						$record = self::CreateNewPlagAwareFileRecord($assignid, $userid, $fileinfo);
+						$existingRecord = self::GetExistingPlagAwareFileRecord($assignid, $userid, $fileinfo);
+
+						// Only consider newly submitted files to prevent double-checking of already checked files
+						if (!$existingRecord) {
+							$record->id = $DB->insert_record('plagiarism_plagaware', $record);
+							self::SubmitRecord($record, null, $fileinfo);
 						}
 					}
 				}
@@ -203,42 +257,24 @@ class plagiarism_plugin_plagaware_submissions
 			$assignmentid = $moodletextsubmissions->assignment;
 			if ($assignsubmission = $DB->get_record('assignsubmission_onlinetext', array('id' => $event->objectid))) {
 
-				if ($assignmentplagaware = $DB->get_field('plagiarism_plagaware_assign', 'enabled', array('assignid' => $assignmentid)) && $assignmentplagaware = $DB->get_field('plagiarism_plagaware_assign', 'autoenabled', array('assignid' => $assignmentid))) {
+				if ($DB->get_field('plagiarism_plagaware_assign', 'enabled', array('assignid' => $assignmentid)) && $DB->get_field('plagiarism_plagaware_assign', 'autoenabled', array('assignid' => $assignmentid))) {
 
-					// Insert information in plagaware database.
-					$count = "SELECT id  FROM {plagiarism_plagaware} WHERE userid = ? AND filetype = ? AND assignid = ?
-						";
-					$countsubmit = $DB->get_record_sql($count, array($userid, "onlinetext", $assignmentid));
-					$record = new stdClass();
-					$record->assignid = $assignsubmission->assignment;
-					$record->userid = $userid;
-					$record->filetype = "onlinetext";
-					$record->fileid = $assignsubmission->id;
-					$record->timecreated = time();
-					$record->reporturl = 1;
+					$existingRecord = self::GetExistingPlagAwareTextRecord($assignmentid, $userid);
+					$record = self::CreateNewPlagAwareTextRecord($assignsubmission, $userid);
 
-					if (!$countsubmit) {
-						$newrecordid = $DB->insert_record('plagiarism_plagaware', $record);
-						$resultUrl = $CFG->wwwroot . "/plagiarism/plagaware/callback.php?recoredid=" . $newrecordid;
-					} else {
-						$record->id = $countsubmit->id;
-						$DB->update_record('plagiarism_plagaware', $record, $bulk = false);
-						$resultUrl = $CFG->wwwroot . "/plagiarism/plagaware/callback.php?recoredid=" . $countsubmit->id;
+					// Only submit if the text has not been submitted before
+					if (!$existingRecord) {
+						$record->id = $DB->insert_record('plagiarism_plagaware', $record);
+						$testText = base64_encode($assignsubmission->onlinetext);
+						self::SubmitRecord($record, $testText, null);
 					}
-					$userCode = $plagawareconfig->usercode;
-
-					$testText = base64_encode($assignsubmission->onlinetext);
-
-					$sendrequest = self::SubmitPlagAware($userCode, $resultUrl, $testText);
-
-
 				}
 			}
 		}
 	}
 
 
-	public static function SubmitPlagAware($UserCode, $resultUrl, $testText, $reportName = null, $reportComment = null, $projectId = null, $filelocation = null, $isfile = false, $dryRun = false)
+	public static function SubmitPlagAware($UserCode, $resultUrl, $testText, $reportName = null, $reportComment = null, $projectId = null, $filelocation = null, $dryRun = false)
 	{
 		global $USER;
 		$lang = explode("_", $USER->lang);
@@ -255,7 +291,7 @@ class plagiarism_plugin_plagaware_submissions
 			'DryRun' => $dryRun,
 			'Lang' => $lang[0]
 		);
-		if (!$isfile) {
+		if ($testText) {
 			$postdata['TestText'] = base64_decode($testText);
 		}
 
@@ -266,7 +302,7 @@ class plagiarism_plugin_plagaware_submissions
 		$content .= "--$boundary\n";
 
 		// Collect FILE data
-		if ($isfile == true) {
+		if ($filelocation) {
 
 			// Get the content of the file.
 			$fcontent = "";
@@ -308,4 +344,3 @@ class plagiarism_plugin_plagaware_submissions
 
 
 }
-?>

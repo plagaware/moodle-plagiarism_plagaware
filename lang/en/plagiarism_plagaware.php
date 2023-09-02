@@ -26,14 +26,18 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname']                   = 'PlagAware Plagiarism Checker';
 $string['plagaware']                    = 'PlagAware';
 $string['usercode']                   	= 'User Code';
-$string['enabled']                = 'Enable PlagAware';
+$string['enabled']                      = 'Enable PlagAware';
 $string['plagaware_auto_post']          = 'Auto submit to PlagAware';
-$string['enabled_help']           = 'Enable PlagAware to enable plagiarism checking of assignemnts';
+$string['enabled_help']                 = 'Enable PlagAware to enable plagiarism checking of assignemnts';
 $string['saved_plagaware_settings']     = 'Settings succesfully saved';
 $string['plagaware_settings_header']    = 'PlagAware Settings';
 $string['view_report']                  = 'View';
 $string['view_report_pdf']              = 'PDF';
-$string['wait_for_report']              = 'Waiting...';
+$string['wait_for_report']              = 'Waiting for PlagAware...';
 $string['send_file']                    = 'Plagiarism Check...';
-$string['submited']                     = 'Plagiarism check started';
-
+$string['submited']                     = 'Plagiarism check started'; 
+$string['plagawareuse']                 = 'Enable PlagAware'; //plagaware_use
+$string['error']                        = 'Plagiarism check failed';
+$string['timeout']                      = 'Timeout';
+$string['restart']                      = 'Restart Plagiarism Check...';
+$string['submission_error']             = 'One or more files could not be submitted to PlagAware';
