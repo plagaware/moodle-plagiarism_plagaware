@@ -9,6 +9,14 @@ For further support, please contact the [PlagAware Support](https://my.plagaware
 
 # Release Notes
 
+## 2.1.0
+- Enhancement: Add functionality to restart plagiarism checks
+- Enhancement: Add speaking error messages in case of submission errors
+- Enhancement: Add icons for easier identification of plagiarism check status
+- Enhancement: Handle timeout of plagiarism checks and provide option to restart check
+- Bugfix: Removed deprecated function calls for Moodle 3.9.22 and above
+- Bugfix: Resloved missing language strings
+    
 ## 2.0.9
 - Bugfix: Duplicate settings in assingment module
 
