@@ -25,27 +25,26 @@
 $observers = array(
     array(
         'eventname'   => 'assignsubmission_file\event\submission_created',
-		'includefile' => '/plagiarism/plagaware/plagaware_submissions.php',
+        'includefile' => '/plagiarism/plagaware/plagaware_submissions.php',
         'callback'    => 'plagiarism_plugin_plagaware_submissions::auto_check_and_send_submission_file_to_plagaware',
-         'priority'    => 9999
+        'priority'    => 9999
     ),
     array(
         'eventname'   => 'assignsubmission_file\event\submission_updated',
-		'includefile' => '/plagiarism/plagaware/plagaware_submissions.php',
+        'includefile' => '/plagiarism/plagaware/plagaware_submissions.php',
         'callback'    => 'plagiarism_plugin_plagaware_submissions::auto_check_and_send_submission_file_to_plagaware',
-        
         'priority'    => 9999
-		),
+    ),
     array(
         'eventname'   => 'assignsubmission_onlinetext\event\submission_created',
-		'includefile' => '/plagiarism/plagaware/plagaware_submissions.php',
+        'includefile' => '/plagiarism/plagaware/plagaware_submissions.php',
         'callback'    => 'plagiarism_plugin_plagaware_submissions::auto_check_and_send_submission_text_to_plagaware',
-         'priority'    => 9999
+        'priority'    => 9999
     ),
     array(
         'eventname'   => 'assignsubmission_onlinetext\event\submission_updated',
-		'includefile' => '/plagiarism/plagaware/plagaware_submissions.php',
+        'includefile' => '/plagiarism/plagaware/plagaware_submissions.php',
         'callback'    => 'plagiarism_plugin_plagaware_submissions::auto_check_and_send_submission_text_to_plagaware',
-      'priority'    => 9999
+        'priority'    => 9999
     )
 );

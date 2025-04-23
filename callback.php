@@ -41,8 +41,8 @@ $record->id = $rid;
 $record->result = $result;
 $record->status = $status;
 $record->reporturl = $id;
-$record->replytime= time();
 $DB->update_record('plagiarism_plagaware', $record, $bulk = false);
 
+die("Callback registered");
 
 ?>

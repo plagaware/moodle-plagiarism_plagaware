@@ -1,42 +1,58 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="plagiarism/plagaware/db" VERSION="2023033102" COMMENT="XMLDB file for Moodle plagiarism/plagaware"
-xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+<XMLDB PATH="plagiarism/plagaware/db" VERSION="20230905" COMMENT="XMLDB file for Moodle plagiarism/plagaware"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
-	<TABLES>
-		<TABLE NAME="plagiarism_plagaware" COMMENT="plagiarism_plagaware table from MySQL">
-			<FIELDS>
-				<FIELD NAME="id" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="true"/>
-				<FIELD NAME="assignid" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
-				<FIELD NAME="userid" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
-				<FIELD NAME="fileid" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
-				<FIELD NAME="filetype" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
-				<FIELD NAME="reporturl" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
-				<FIELD NAME="timecreated" TYPE="int" LENGTH="9" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
-				<FIELD NAME="result" TYPE="char" LENGTH="255" NOTNULL="false" />
-				<FIELD NAME="status" TYPE="char" LENGTH="255" NOTNULL="false" />
-				<FIELD NAME="replytime" TYPE="char" LENGTH="255" NOTNULL="false" />
-				<FIELD NAME="filehash" TYPE="char" LENGTH="255" NOTNULL="false" />
-			</FIELDS>
-			<KEYS>
-				<KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-				<KEY NAME="foreign_assign" TYPE="foreign" FIELDS="assignid" REFTABLE="assign" REFFIELDS="id"/>
-				<KEY NAME="foreign_user" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
-				<KEY NAME="foreign_file" TYPE="foreign" FIELDS="fileid" REFTABLE="files" REFFIELDS="id"/>
-			</KEYS>
-		</TABLE>
-		
-		<TABLE NAME="plagiarism_plagaware_assign" COMMENT="plagiarism_plagaware_assign table from MySQL">
-			<FIELDS>
-				<FIELD NAME="id" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="true"/>
-				<FIELD NAME="assignid" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
-				<FIELD NAME="enabled" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
-				<FIELD NAME="autoenabled" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false" DEFAULT="0" />
-			</FIELDS>
-			<KEYS>
-				<KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-				<KEY NAME="foreign" TYPE="foreign" FIELDS="assignid" REFTABLE="assign" REFFIELDS="id"/>
-			</KEYS>
-		</TABLE>
-	</TABLES>
+    <TABLES>
+        <TABLE NAME="plagiarism_plagaware" COMMENT="plagiarism_plagaware table from MySQL">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="assignid" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="userid" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="fileid" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="filetype" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="reporturl" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="9" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+                <FIELD NAME="result" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
+                <FIELD NAME="status" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+                <KEY NAME="foreign_assign" TYPE="foreign" FIELDS="assignid" REFTABLE="assign" REFFIELDS="id"/>
+                <KEY NAME="foreign_user" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+                <KEY NAME="foreign_file" TYPE="foreign" FIELDS="fileid" REFTABLE="files" REFFIELDS="id"/>
+            </KEYS>
+        </TABLE>
+        <TABLE NAME="plagiarism_plagaware_assign" COMMENT="plagiarism_plagaware_assign table from MySQL">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="assignid" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="enabled" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="autoenabled" TYPE="int" LENGTH="9" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+                <KEY NAME="foreign" TYPE="foreign" FIELDS="assignid" REFTABLE="assign" REFFIELDS="id"/>
+            </KEYS>
+        </TABLE>
+        <TABLE NAME="plagiarism_plagaware_library" COMMENT="plagiarism_plagaware_libtexts table retrofitted from MySQL">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="date" TYPE="int" LENGTH="9" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="contenthash" TYPE="char" LENGTH="40" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="plagaware_id" TYPE="int" LENGTH="9" NOTNULL="false" SEQUENCE="false"/>
+                <FIELD NAME="status" TYPE="char" LENGTH="16" NOTNULL="true" SEQUENCE="false"/>
+            </FIELDS>
+            <INDEXES>
+                <INDEX NAME="contenthash" UNIQUE="false" FIELDS="contenthash"/>
+                <INDEX NAME="date" UNIQUE="false" FIELDS="date"/>
+                <INDEX NAME="plagaware_id" UNIQUE="false" FIELDS="plagaware_id"/>
+                <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+            </INDEXES>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+                <KEY NAME="foreign" TYPE="foreign" FIELDS="contenthash" REFTABLE="files" REFFIELDS="contenthash"/>
+            </KEYS>
+        </TABLE>
+    </TABLES>
 </XMLDB>

@@ -49,28 +49,64 @@ if ($mform->is_cancelled()) {
 }
 
 if (($data = $mform->get_data()) && confirm_sesskey()) {
-    // If the checkbox isn't enabled, Moodle doesn't send it with the data...
-    if (!isset($data->enabled))
-        set_config('enabled', 0, 'plagiarism_plagaware');
-
     foreach ($data as $field => $value) {
         if (strpos($field, "submit") === false) {
             set_config($field, $value, 'plagiarism_plagaware');
         }
     }
-
     echo $OUTPUT->notification(get_string('saved_plagaware_settings', 'plagiarism_plagaware'), 'notifysuccess');
 }
 
 
 echo $OUTPUT->header();
 
-echo "<h1>" . get_string('plagaware_settings_header', 'plagiarism_plagaware') . "</h1>\n";
+echo "<h3>" . get_string('plagaware_settings_header', 'plagiarism_plagaware') . "</h3>\n";
 
 echo $OUTPUT->box_start();
 
 $mform->display();
 
-echo $OUTPUT->box_end();
+$config = get_config('plagiarism_plagaware');
+if ($config->debugmode) {
+    echo "<h4>Debug Information</h4>";
+    if ($config->create_json_index_file) {
+        $file_count = get_lc_file_count();
+        echo ("<p>" . sprintf(get_string('lc_file_count', 'plagiarism_plagaware'), $file_count) . "</p>");
+    }
+}
 
+
+echo $OUTPUT->box_end();
 echo $OUTPUT->footer();
+
+ function get_lc_file_count()
+    {
+        global $DB;
+        $config = get_config('plagiarism_plagaware');
+        $graceSecondsAfterCutoffDate = $config->index_file_grace_seconds_after_cutoff;
+        
+        $inIncludeAssignmentIds = create_numeric_array_in($config->lc_include_assignment_ids);
+        $inExcludeAssignmentIds = create_numeric_array_in($config->lc_exclude_assignment_ids);
+
+        $sql = "SELECT COUNT(f.id) AS file_count 
+                FROM {files} f
+                JOIN {assign_submission} s ON f.itemid = s.id
+                JOIN {assign} a ON s.assignment = a.id
+                LEFT JOIN {plagiarism_plagaware_library} p on p.contenthash = f.contenthash
+                WHERE COALESCE(a.cutoffdate, 0) > 0 
+                    AND (UNIX_TIMESTAMP() - COALESCE(a.cutoffdate)) > $graceSecondsAfterCutoffDate
+                    AND f.component='assignsubmission_file'
+                    AND f.filearea='submission_files'
+                    AND (f.mimetype LIKE 'application/%' OR f.mimetype LIKE 'text/plain')
+                    AND (p.status IS NULL OR p.status = 'NEW')";
+        if ($inIncludeAssignmentIds) {
+            $sql .= " AND a.id IN $inIncludeAssignmentIds";
+        }
+        if ($inExcludeAssignmentIds) {
+            $sql .= " AND a.id NOT IN $inExcludeAssignmentIds";
+        }
+        
+        $row = $DB->get_record_sql($sql);
+        return $row->file_count;
+    }
+

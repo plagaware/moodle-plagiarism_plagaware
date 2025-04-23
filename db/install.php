@@ -22,10 +22,20 @@
  */
 
 function xmldb_plagiarism_plagaware_install() {
-    global $CFG;
 
-    set_config('enableplagiarism', 1);
-    set_config('enableplagiarism', 1, 'plagiarism');
-    set_config('enabled', 1, 'plagiarism');
-    set_config('plagaware_auto_post', 1, 'plagiarism');
+    // basic 
+    set_config('enabled', 0, 'plagiarism_plagaware');
+    set_config('plagaware_auto_post', 0, 'plagiarism_plagaware');
+    set_config('usercode', '', 'plagiarism_plagaware');
+    set_config('debugmode', 0, 'plagiarism_plagaware');
+
+    // new for upload moodle files to library functionality
+    set_config('create_json_index_file', 0, 'plagiarism_plagaware');
+    set_config('index_file_grace_seconds_after_cutoff', 30 * 24 * 60 * 60, 'plagiarism_plagaware');
+    set_config('index_file_rows_per_batch', 1000, 'plagiarism_plagaware');
+    set_config('index_file_index_path', '/filedir/index.json', 'plagiarism_plagaware');             // relative to data dir
+    set_config('index_file_log_path', '/lc-cache/fileslog.json', 'plagiarism_plagaware');           // relative to data dir
+    set_config('lc_include_assignment_ids', '', 'plagiarism_plagaware');
+    set_config('lc_exclude_assignment_ids', '', 'plagiarism_plagaware');
+
 }
