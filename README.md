@@ -9,6 +9,11 @@ For further support, please contact the [PlagAware Support](https://my.plagaware
 
 # Release Notes
 
+## 2.2.3
+- Enhancement: Ensure compatibility with Moodle 4.1LTS and 4.5LTS
+- Enhancement: Support for [file synchronization with PlagAware library](https://www.plagaware.com/de/moodle-bibliothek-synchronisation)
+- Enhancement: Implmentation of Moodle Privay API
+
 ## 2.1.0
 - Enhancement: Add functionality to restart plagiarism checks
 - Enhancement: Add speaking error messages in case of submission errors
