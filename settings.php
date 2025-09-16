@@ -48,6 +48,9 @@ if ($mform->is_cancelled()) {
     redirect(new moodle_url('/'));
 }
 
+echo $OUTPUT->header();
+
+
 if (($data = $mform->get_data()) && confirm_sesskey()) {
     foreach ($data as $field => $value) {
         if (strpos($field, "submit") === false) {
@@ -56,9 +59,6 @@ if (($data = $mform->get_data()) && confirm_sesskey()) {
     }
     echo $OUTPUT->notification(get_string('saved_plagaware_settings', 'plagiarism_plagaware'), 'notifysuccess');
 }
-
-
-echo $OUTPUT->header();
 
 echo "<h3>" . get_string('plagaware_settings_header', 'plagiarism_plagaware') . "</h3>\n";
 
@@ -79,34 +79,50 @@ if ($config->debugmode) {
 echo $OUTPUT->box_end();
 echo $OUTPUT->footer();
 
- function get_lc_file_count()
-    {
-        global $DB;
-        $config = get_config('plagiarism_plagaware');
-        $graceSecondsAfterCutoffDate = $config->index_file_grace_seconds_after_cutoff;
-        
-        $inIncludeAssignmentIds = create_numeric_array_in($config->lc_include_assignment_ids);
-        $inExcludeAssignmentIds = create_numeric_array_in($config->lc_exclude_assignment_ids);
+function get_lc_file_count()
+{
+    global $DB;
 
-        $sql = "SELECT COUNT(f.id) AS file_count 
-                FROM {files} f
-                JOIN {assign_submission} s ON f.itemid = s.id
-                JOIN {assign} a ON s.assignment = a.id
-                LEFT JOIN {plagiarism_plagaware_library} p on p.contenthash = f.contenthash
-                WHERE COALESCE(a.cutoffdate, 0) > 0 
-                    AND (UNIX_TIMESTAMP() - COALESCE(a.cutoffdate)) > $graceSecondsAfterCutoffDate
-                    AND f.component='assignsubmission_file'
-                    AND f.filearea='submission_files'
-                    AND (f.mimetype LIKE 'application/%' OR f.mimetype LIKE 'text/plain')
-                    AND (p.status IS NULL OR p.status = 'NEW')";
-        if ($inIncludeAssignmentIds) {
-            $sql .= " AND a.id IN $inIncludeAssignmentIds";
-        }
-        if ($inExcludeAssignmentIds) {
-            $sql .= " AND a.id NOT IN $inExcludeAssignmentIds";
-        }
-        
-        $row = $DB->get_record_sql($sql);
-        return $row->file_count;
+    $config = get_config('plagiarism_plagaware');
+    $graceSecondsAfterCutoffDate = $config->index_file_grace_seconds_after_cutoff;
+
+    // Turn config into arrays of ints
+    $includeIds = create_numeric_array_in($config->lc_include_assignment_ids);
+    $excludeIds = create_numeric_array_in($config->lc_exclude_assignment_ids);
+
+    $now = time(); // PHP time() replaces UNIX_TIMESTAMP()
+
+    $params = [
+        'now'       => $now,
+        'grace'     => $graceSecondsAfterCutoffDate,
+        'component' => 'assignsubmission_file',
+        'filearea'  => 'submission_files',
+    ];
+
+    $sql = "SELECT COUNT(f.id) AS file_count
+        FROM {files} f
+        JOIN {assign_submission} s ON f.itemid = s.id
+        JOIN {assign} a ON s.assignment = a.id
+        LEFT JOIN {plagiarism_plagaware_library} p ON p.contenthash = f.contenthash
+        WHERE COALESCE(a.cutoffdate, 0) > 0
+          AND (:now - COALESCE(a.cutoffdate, 0)) > :grace
+          AND f.component = :component
+          AND f.filearea = :filearea
+          AND (f.mimetype LIKE 'application/%' OR f.mimetype = 'text/plain')
+          AND (p.status IS NULL OR p.status = 'NEW')";
+
+    // Safe handling of IN/NOT IN filters
+    if (!empty($includeIds)) {
+        [$insql, $inparams] = $DB->get_in_or_equal($includeIds, SQL_PARAMS_NAMED, 'inc');
+        $sql .= " AND a.id $insql";
+        $params += $inparams;
+    }
+    if (!empty($excludeIds)) {
+        [$notsql, $notparams] = $DB->get_in_or_equal($excludeIds, SQL_PARAMS_NAMED, 'exc', false);
+        $sql .= " AND a.id $notsql";
+        $params += $notparams;
     }
 
+    $row = $DB->get_record_sql($sql, $params);
+    return $row->file_count ?? 0;
+}

@@ -9,6 +9,13 @@ For further support, please contact the [PlagAware Support](https://my.plagaware
 
 # Release Notes
 
+## 2.2.4 RC1
+- Bugfix: Compatibility issues with Non-MySQL databases
+- Bugfix: Removed PlagAware plugin settings from non-assignment course elements
+- Change: Discontinued support for Moodle < 4.1
+- Enhancement: Added Error message for failed plagiarism checks
+- Enhancement: Various minor cleanups and refactoring
+
 ## 2.2.3
 - Enhancement: Ensure compatibility with Moodle 4.1LTS and 4.5LTS
 - Enhancement: Support for [file synchronization with PlagAware library](https://www.plagaware.com/de/moodle-bibliothek-synchronisation)

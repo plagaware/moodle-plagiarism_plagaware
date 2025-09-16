@@ -29,26 +29,28 @@ require_once('plagaware_submissions.php');
 $sendtoplagaware = new plagiarism_plugin_plagaware_submissions;
 
 $type = optional_param('type', 0, PARAM_RAW);
-$userid = optional_param('sid', 0, PARAM_RAW);
+$userid = optional_param('userid', 0, PARAM_RAW);
 $cmidd = optional_param('cmid', 0, PARAM_RAW);
 $return = optional_param('return', 0, PARAM_RAW);
 $action = optional_param('action', 0, PARAM_RAW);
+$plugin = optional_param('plugin', 0, PARAM_RAW);
 if ($type == "text") {
 	$assignmentid = optional_param('assignment', 0, PARAM_RAW);
 	$post = $sendtoplagaware->check_and_send_submission_text_to_plagaware($userid, $assignmentid);
-
 } elseif ($type == "file") {
 	$fid = optional_param('fid', 0, PARAM_RAW);
 	$contextid = optional_param('contextid', 0, PARAM_RAW);
 	$post = $sendtoplagaware->check_and_send_submission_file_to_plagaware($userid, $fid, $contextid, $cmidd);
-}
-if ($action == 'grading') {
-	$urltogo = new moodle_url($CFG->wwwroot . '/mod/assign/view.php', array('id' => $return, 'action' => $action));
+} 
+
+if (($action == 'grading') || ($action == 'viewpluginassignsubmission')) {
+	$urltogo = new moodle_url($CFG->wwwroot . '/mod/assign/view.php', array('id' => $return, 'action' => 'grading'));
 } else {
 	$urltogo = new moodle_url($CFG->wwwroot . '/mod/assign/view.php', array('userid' => $userid, 'id' => $return, 'action' => 'grader'));
 }
+
 if ($post) {
-	redirect($urltogo, get_string('submited', 'plagiarism_plagaware'), null, \core\output\notification::NOTIFY_SUCCESS);
+	redirect($urltogo, get_string('submitted', 'plagiarism_plagaware'), null, \core\output\notification::NOTIFY_SUCCESS);
 } else {
 	redirect($urltogo, get_string('submission_error', 'plagiarism_plagaware'), null, \core\output\notification::NOTIFY_WARNING);
 }

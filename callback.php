@@ -38,9 +38,9 @@ fwrite($handle, $response);
 $record = new stdClass();
 
 $record->id = $rid;
-$record->result = $result;
+$record->result = ($result != -1) ? $result : null;
 $record->status = $status;
-$record->reporturl = $id;
+$record->reporturl = $id ?: get_string('error', 'plagiarism_plagaware');
 $DB->update_record('plagiarism_plagaware', $record, $bulk = false);
 
 die("Callback registered");

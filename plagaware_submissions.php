@@ -40,9 +40,7 @@ class plagiarism_plugin_plagaware_submissions
 		$record->fileid = $fileinfo->id;
 		$record->timecreated = time();
 		$record->reporturl = 1;
-		//$record->filehash = $fileinfo->contenthash;
 		$record->status = "waiting";
-		//$record->replytime = null;
 		return $record;
 	}
 
@@ -58,7 +56,6 @@ class plagiarism_plugin_plagaware_submissions
 		$record->timecreated = time();
 		$record->reporturl = 1;
 		$record->status = "waiting";
-		//$record->replytime = null;
 		return $record;
 	}
 
@@ -153,8 +150,6 @@ class plagiarism_plugin_plagaware_submissions
 			}
 		}
 	}
-
-
 
 	public static function check_and_send_submission_text_to_plagaware($userid, $assignmentid)
 	{

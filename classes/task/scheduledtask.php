@@ -18,7 +18,7 @@ class scheduledtask extends \core\task\scheduled_task
         global $CFG, $DB;
 
         require_once($CFG->dirroot . '/plagiarism/plagaware/lib.php');
-        
+
         $config = get_config('plagiarism_plagaware');
 
         if (!$config->create_json_index_file) {
@@ -38,13 +38,13 @@ class scheduledtask extends \core\task\scheduled_task
         $inIncludeAssignmentIds = create_numeric_array_in($config->lc_include_assignment_ids);
         // Exclude assignment ids
         $inExcludeAssignmentIds = create_numeric_array_in($config->lc_exclude_assignment_ids);
-                
+
         mtrace('Scheduled task for PlagAware Plugin is running...');
 
         // Scan the log file of libcrawler and enter the processed files into the plagiarism_plagaware_library table 
         mtrace("===== Scanning $logFilesPath for files recently processed by LibCrawler...");
-        $addedCount = $this->scan_file_reverse($logFilesPath, function($line) {
-            
+        $addedCount = $this->scan_file_reverse($logFilesPath, function ($line) {
+
             if (!$line)
                 return false;
 
@@ -53,7 +53,7 @@ class scheduledtask extends \core\task\scheduled_task
                 mtrace("Failed to decode metadata: $line");
                 return false;
             }
-            
+
             $contenthash = substr($metadata->file, 6);
             if (!$contenthash) {
                 mtrace("Contenthash id is not valid.");
@@ -77,25 +77,41 @@ class scheduledtask extends \core\task\scheduled_task
         mtrace("Added $addedCount new records from LibCrawler");
 
         mtrace("===== Querying not yet uploaded files...");
-        $sql = "SELECT f.id AS file_id, f.filename, f.contenthash, f.pathnamehash, f.userid, a.name AS assignment_name, a.cutoffdate, s.timemodified, p.status
+        $now = time(); // Current timestamp in PHP
+        $params = [
+            'now' => $now,
+            'grace' => $graceSecondsAfterCutoffDate,
+            'component' => 'assignsubmission_file',
+            'filearea' => 'submission_files',
+        ];
+
+        $sql = "SELECT f.id AS file_id, f.filename, f.contenthash, f.pathnamehash, f.userid,
+               a.name AS assignment_name, a.cutoffdate, s.timemodified, p.status
                 FROM {files} f
                 JOIN {assign_submission} s ON f.itemid = s.id
                 JOIN {assign} a ON s.assignment = a.id
-                LEFT JOIN {plagiarism_plagaware_library} p on p.contenthash = f.contenthash
-                WHERE COALESCE(a.cutoffdate, 0) > 0 
-                    AND (UNIX_TIMESTAMP() - COALESCE(a.cutoffdate)) > $graceSecondsAfterCutoffDate
-                    AND f.component='assignsubmission_file'
-                    AND f.filearea='submission_files'
-                    AND (f.mimetype LIKE 'application/%' OR f.mimetype LIKE 'text/plain')
-                    AND (p.status IS NULL OR p.status = 'NEW')";
+                LEFT JOIN {plagiarism_plagaware_library} p ON p.contenthash = f.contenthash
+                WHERE COALESCE(a.cutoffdate, 0) > 0
+                AND (:now - COALESCE(a.cutoffdate, 0)) > :grace
+                AND f.component = :component
+                AND f.filearea = :filearea
+                AND (f.mimetype LIKE 'application/%' OR f.mimetype = 'text/plain')
+                AND (p.status IS NULL OR p.status = 'NEW')";
+
+        // Optional filters
         if ($inIncludeAssignmentIds) {
-            $sql .= " AND a.id IN $inIncludeAssignmentIds";
+            [$insql, $inparams] = $DB->get_in_or_equal($inIncludeAssignmentIds, SQL_PARAMS_NAMED, 'inc');
+            $sql .= " AND a.id $insql";
+            $params += $inparams;
         }
         if ($inExcludeAssignmentIds) {
-            $sql .= " AND a.id NOT IN $inExcludeAssignmentIds";
+            [$notsql, $notparams] = $DB->get_in_or_equal($inExcludeAssignmentIds, SQL_PARAMS_NAMED, 'exc', false);
+            $sql .= " AND a.id $notsql";
+            $params += $notparams;
         }
-        $sql .= " LIMIT 0,$maxNumberOfRowsPerBatch";
-        $rows = $DB->get_records_sql($sql);
+
+        // Fetch with Moodle’s pagination (cross-DB safe)
+        $rows = $DB->get_records_sql($sql, $params, 0, $maxNumberOfRowsPerBatch);
 
 
         $files = [];
@@ -136,12 +152,12 @@ class scheduledtask extends \core\task\scheduled_task
             return 0;
         }
         if (!flock($fp, LOCK_SH)) {
-            fclose($fp);        
+            fclose($fp);
             mtrace("Unable to get read lock on $file");
             return 0;
         }
         fseek($fp, 0, SEEK_END); // Move to the end
-        
+
         $pos = ftell($fp);
         $buffer = "";
         $addedCount = 0;
@@ -151,7 +167,7 @@ class scheduledtask extends \core\task\scheduled_task
             $pos--;
             fseek($fp, $pos);
             $char = fgetc($fp);
-        
+
             if ($char === "\n") {
                 $line = trim($buffer);
                 if ($line) {
@@ -169,7 +185,7 @@ class scheduledtask extends \core\task\scheduled_task
             }
         }
         flock($fp, LOCK_UN);
-        fclose($fp);        
+        fclose($fp);
 
         return $addedCount;
     }
