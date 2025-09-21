@@ -22,6 +22,9 @@
  */
 
 function xmldb_plagiarism_plagaware_install() {
+    
+    // Ensure plagiarism system is enabled globally.
+    set_config('enableplagiarism', 1);
 
     // basic 
     set_config('enabled', 0, 'plagiarism_plagaware');

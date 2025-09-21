@@ -23,9 +23,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2025091304;
+$plugin->version = 2025092102;
 $plugin->requires = 2022112800; //4.1.0 LTS https://moodledev.io/general/releases
 $plugin->component = 'plagiarism_plagaware';
 $plugin->maturity = MATURITY_RC;
-$plugin->release = '2.24 RC1';
+$plugin->release = '2.24 RC3';
 $plugin->dependencies = array('mod_assign' => ANY_VERSION);

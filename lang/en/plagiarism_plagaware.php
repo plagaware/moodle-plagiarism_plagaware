@@ -68,7 +68,7 @@ $string['index_file_index_path'] = 'Path and name of the index file, relative to
 $string['index_file_log_path'] = 'Path and name of the LibCrawler log file, relative to the data directory (/moodledata)';
 $string['index_file_rows_per_batch'] = 'Maximum number of documents to be uploaded per batch';
 $string['expert_header'] = 'Expert settings and debugging';
-
+$string['assign_globally_disabled'] = 'Note: PlagAware is switched off globally in this Moodle instance.';
 
 
 

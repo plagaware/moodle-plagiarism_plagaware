@@ -196,34 +196,40 @@ function plagiarism_plagaware_coursemodule_standard_elements($formwrapper, $mfor
         $autochecked = $DB->get_field_sql($sqlz, array('cmid' => $cmid));
     }
 
+    $configsettings = get_config('plagiarism_plagaware');
     $mform->addElement('header', 'plagaware', get_string('pluginname', 'plagiarism_plagaware'));
-    $mform->addElement('checkbox', 'enabled', get_string('enabled', 'plagiarism_plagaware'));
-    $mform->setDefault('enabled', $checked);
-    $mform->addElement('checkbox', 'plagaware_auto', get_string('plagaware_auto_post', 'plagiarism_plagaware'));
-    $mform->setDefault('plagaware_auto', $autochecked);
+    if (!$configsettings->enabled) {
+        $mform->addElement('static', 'info', '', get_string('assign_globally_disabled', 'plagiarism_plagaware'));
+    } else {
+        $mform->addElement('checkbox', 'enabled', get_string('enabled', 'plagiarism_plagaware'));
+        $mform->setDefault('enabled', $checked);
+        $mform->addElement('checkbox', 'plagaware_auto', get_string('plagaware_auto_post', 'plagiarism_plagaware'));
+        $mform->setDefault('plagaware_auto', $autochecked);
+    }
 }
 
 
-function plagiarism_plagaware_coursemodule_edit_post_actions($data, $course)
-{
+function plagiarism_plagaware_coursemodule_edit_post_actions($data, $course) {
     global $DB;
+
+    // Only apply to assignment modules
+    if ($data->modulename !== 'assign') {
+        return $data;
+    }
 
     $configsettings = get_config('plagiarism_plagaware');
     if (isset($configsettings->enabled)) {
-        $currentassignmentconfig = $DB->get_record('plagiarism_plagaware_assign', array('assignid' => $data->instance));
+        $currentassignmentconfig = $DB->get_record('plagiarism_plagaware_assign', ['assignid' => $data->instance]);
+
         $record = new stdClass();
         $record->assignid = $data->instance;
-        if (isset($data->enabled))
-            $record->enabled = $data->enabled;
-        else
-            $record->enabled = 0;
+        $record->enabled = isset($data->enabled) ? $data->enabled : 0;
+        $record->autoenabled = isset($data->plagaware_auto) ? $data->plagaware_auto : 0;
 
-
-        if (isset($data->plagaware_auto)) {
-            $record->autoenabled = $data->plagaware_auto;
-        } else {
+        // Don't allow auto submit if PlagAware is switched off for this assignment (does not make sense and is misleading)
+        if ($record->autoenabled && !$record->enabled) 
             $record->autoenabled = 0;
-        }
+
         if ($currentassignmentconfig) {
             $record->id = $currentassignmentconfig->id;
             $DB->update_record('plagiarism_plagaware_assign', $record);
